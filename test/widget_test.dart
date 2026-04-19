@@ -12,7 +12,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('/'), findsOneWidget);
+    expect(find.text('VPN is OFF'), findsOneWidget);
 
     await tester.tap(find.text('Premium'));
     await tester.pumpAndSettle();
@@ -24,6 +24,6 @@ void main() {
 
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
-    expect(find.text('/'), findsOneWidget);
+    expect(find.text('VPN is OFF'), findsOneWidget);
   });
 }

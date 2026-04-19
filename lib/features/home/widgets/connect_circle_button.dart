@@ -1,0 +1,93 @@
+import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../home_connection_state.dart';
+
+/// Large circular connect control (visual only — wiring in a later step).
+class ConnectCircleButton extends StatelessWidget {
+  const ConnectCircleButton({
+    super.key,
+    required this.state,
+  });
+
+  final HomeConnectionState state;
+
+  static const double diameter = 168;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Semantics(
+      label: switch (state) {
+        HomeConnectionState.disconnected => 'Connect VPN',
+        HomeConnectionState.connecting => 'VPN connecting',
+        HomeConnectionState.connected => 'Disconnect VPN',
+      },
+      button: true,
+      child: SizedBox(
+        width: diameter,
+        height: diameter,
+        child: switch (state) {
+          HomeConnectionState.disconnected => _OutlinedCircle(
+              child: Icon(
+                Icons.power_settings_new_rounded,
+                size: 56,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          HomeConnectionState.connecting => _OutlinedCircle(
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ),
+          HomeConnectionState.connected => DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.colorScheme.primary,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.brandPrimary.withOpacity(0.35),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.shield_rounded,
+                size: 56,
+                color: Colors.white,
+              ),
+            ),
+        },
+      ),
+    );
+  }
+}
+
+class _OutlinedCircle extends StatelessWidget {
+  const _OutlinedCircle({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.6),
+          width: 3,
+        ),
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.25),
+      ),
+      child: Center(child: child),
+    );
+  }
+}
