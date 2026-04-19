@@ -35,6 +35,21 @@ Run against a deployed backend:
 flutter run --dart-define=API_BASE_URL=https://api.mira-vpn.example
 ```
 
+### Web preview (UI only)
+
+Flutter web **debug** builds are slow to load (large script, unoptimized). On desktop
+browsers the default **CanvasKit** renderer also downloads a heavy WASM bundle. For a
+lighter first load while checking layout:
+
+```bash
+chmod +x run_web.sh   # once
+./run_web.sh
+# faster runtime (slower compile): MODE=release ./run_web.sh
+```
+
+Then open the URL printed in the terminal (e.g. `http://localhost:7357`). VPN
+features are not supported on web; this is for UI/navigation only.
+
 ## Layout
 
 ```
