@@ -4,6 +4,9 @@ import '../api/api_client.dart';
 import '../api/auth_api.dart';
 import '../api/wireguard_api.dart';
 import '../storage/token_store.dart';
+import '../storage/wg_config_store.dart';
+import '../vpn/vpn_tunnel.dart';
+import '../vpn/vpn_tunnel_contract.dart';
 
 final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
 
@@ -18,4 +21,12 @@ final authApiProvider = Provider<AuthApi>(
 
 final wireGuardApiProvider = Provider<WireGuardApi>(
   (ref) => WireGuardApi(ref.watch(apiClientProvider).dio),
+);
+
+final wgConfigStoreProvider = Provider<WgConfigStore>(
+  (ref) => SecureWgConfigStore(),
+);
+
+final vpnTunnelAdapterProvider = Provider<VpnTunnelAdapter>(
+  (ref) => createVpnTunnelAdapter(),
 );

@@ -1,6 +1,8 @@
-/// UI-only VPN connection phase for the Home screen (Step 5 — logic comes later).
+/// VPN connection phase shown on the Home screen (backed by [VpnController] on supported platforms).
 enum HomeConnectionState {
   disconnected,
+  preparing,
   connecting,
   connected,
+  error,
 }

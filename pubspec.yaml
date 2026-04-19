@@ -36,6 +36,8 @@ dependencies:
   go_router: ^14.6.2
   dio: ^5.9.2
   flutter_secure_storage: ^10.0.0
+  # 1.0.2+ requires Dart >=3.7; stay on 1.0.1 until app sdk is bumped.
+  wireguard_flutter_plus: 1.0.1
 
 dev_dependencies:
   flutter_test:

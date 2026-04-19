@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/widgets/section_card.dart';
-import 'home_connection_provider.dart';
+import '../../core/vpn/vpn_providers.dart';
 import 'home_connection_state.dart';
+import 'home_vpn_provider.dart';
 import 'widgets/connect_circle_button.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -12,13 +13,18 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(homeConnectionProvider);
+    final ui = ref.watch(homeVpnUiProvider);
 
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: HomeContent(state: state),
+          child: HomeContent(
+            state: ui.connection,
+            errorMessage: ui.errorMessage,
+            onCirclePressed: () =>
+                ref.read(vpnControllerProvider.notifier).onCirclePressed(),
+          ),
         ),
       ),
     );
@@ -27,17 +33,26 @@ class HomeScreen extends ConsumerWidget {
 
 @visibleForTesting
 class HomeContent extends StatelessWidget {
-  const HomeContent({super.key, required this.state});
+  const HomeContent({
+    super.key,
+    required this.state,
+    this.errorMessage,
+    this.onCirclePressed,
+  });
 
   final HomeConnectionState state;
+  final String? errorMessage;
+  final VoidCallback? onCirclePressed;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final statusText = switch (state) {
       HomeConnectionState.disconnected => 'VPN is OFF',
+      HomeConnectionState.preparing => 'Preparing…',
       HomeConnectionState.connecting => 'Connecting…',
       HomeConnectionState.connected => 'VPN is ON',
+      HomeConnectionState.error => "Couldn't connect",
     };
 
     return Column(
@@ -51,8 +66,22 @@ class HomeContent extends StatelessWidget {
           ),
           textAlign: TextAlign.center,
         ),
+        if (state == HomeConnectionState.error &&
+            (errorMessage ?? '').isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            errorMessage!,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
         const SizedBox(height: AppSpacing.lg),
-        ConnectCircleButton(state: state),
+        ConnectCircleButton(
+          state: state,
+          onPressed: onCirclePressed,
+        ),
         const SizedBox(height: AppSpacing.xl),
         SectionCard(
           child: Row(
