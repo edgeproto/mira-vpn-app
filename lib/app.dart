@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/router.dart';
+import 'core/theme/app_theme.dart';
 
 class MiraVpnApp extends ConsumerWidget {
   const MiraVpnApp({super.key});
@@ -13,13 +14,7 @@ class MiraVpnApp extends ConsumerWidget {
     return MaterialApp.router(
       title: 'Mira VPN',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0EA5A4),
-          brightness: Brightness.light,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light(),
       routerConfig: router,
     );
   }
