@@ -20,7 +20,7 @@ void main() {
 
     await tester.tap(find.text('Me'));
     await tester.pumpAndSettle();
-    expect(find.text('/me'), findsOneWidget);
+    expect(find.text('Account'), findsOneWidget);
 
     await tester.tap(find.text('Home'));
     await tester.pumpAndSettle();
