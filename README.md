@@ -26,6 +26,7 @@ Run against a local backend (emulator loopback to host):
 
 ```bash
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
+# or: ./run_dev.sh   (defaults API_BASE_URL; override: API_BASE_URL=http://host:8080 ./run_dev.sh)
 ```
 
 Run against a deployed backend:
