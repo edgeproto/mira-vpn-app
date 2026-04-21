@@ -42,6 +42,20 @@ class _StubAuthApi implements AuthApi {
       throw UnimplementedError();
 
   @override
+  Future<AuthResponseDto> socialGoogle({
+    required String idToken,
+    bool isPro = false,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<AuthResponseDto> socialApple({
+    required String idToken,
+    bool isPro = false,
+  }) async =>
+      throw UnimplementedError();
+
+  @override
   Future<UserDto> me() async {
     if (meUser != null) return meUser!;
     throw StateError('no user');

@@ -64,6 +64,32 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    FocusScope.of(context).unfocus();
+    ScaffoldMessenger.of(context).clearMaterialBanners();
+    try {
+      await ref.read(authControllerProvider.notifier).loginWithGoogle();
+      if (!mounted) return;
+      context.go('/');
+    } catch (e) {
+      if (!mounted) return;
+      _showBanner(authErrorMessage(e));
+    }
+  }
+
+  Future<void> _signInWithApple() async {
+    FocusScope.of(context).unfocus();
+    ScaffoldMessenger.of(context).clearMaterialBanners();
+    try {
+      await ref.read(authControllerProvider.notifier).loginWithApple();
+      if (!mounted) return;
+      context.go('/');
+    } catch (e) {
+      if (!mounted) return;
+      _showBanner(authErrorMessage(e));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authControllerProvider);
@@ -103,12 +129,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     labelText: 'Password',
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
-                      tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+                      tooltip:
+                          _obscurePassword ? 'Show password' : 'Hide password',
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
                       },
                       icon: Icon(
-                        _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
                       ),
                     ),
                   ),
@@ -125,6 +154,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   key: const Key('link-to-sign-up'),
                   onPressed: busy ? null : () => context.push('/auth/sign-up'),
                   child: const Text('Create an account'),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                OutlinedButton.icon(
+                  key: const Key('sign-in-google'),
+                  onPressed: busy ? null : _signInWithGoogle,
+                  icon: const Icon(Icons.login),
+                  label: const Text('Continue with Google'),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                OutlinedButton.icon(
+                  key: const Key('sign-in-apple'),
+                  onPressed: busy ? null : _signInWithApple,
+                  icon: const Icon(Icons.apple),
+                  label: const Text('Continue with Apple'),
                 ),
               ],
             ),

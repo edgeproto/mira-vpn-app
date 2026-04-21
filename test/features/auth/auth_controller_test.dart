@@ -160,6 +160,22 @@ class _FakeAuthApi implements AuthApi {
   }
 
   @override
+  Future<AuthResponseDto> socialGoogle({
+    required String idToken,
+    bool isPro = false,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthResponseDto> socialApple({
+    required String idToken,
+    bool isPro = false,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<UserDto> me() async {
     if (meResult != null) return meResult!;
     throw StateError('me not stubbed');

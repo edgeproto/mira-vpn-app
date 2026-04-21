@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../core/api/api_exception.dart';
 import '../../core/api/auth_api.dart';
@@ -96,5 +98,47 @@ class AuthController extends Notifier<AuthState> {
   Future<void> signOut() async {
     await _tokens.delete();
     state = const AuthState(isLoading: false, user: null);
+  }
+
+  Future<void> loginWithGoogle() async {
+    state = AuthState(isLoading: true, user: state.user);
+    try {
+      final account = await GoogleSignIn.instance.authenticate();
+      final auth = account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('Google did not return an ID token.');
+      }
+      final res = await _auth.socialGoogle(idToken: idToken);
+      await _tokens.write(res.token);
+      state = AuthState(isLoading: false, user: res.user);
+    } catch (e, st) {
+      state = AuthState(isLoading: false, user: state.user);
+      Error.throwWithStackTrace(e, st);
+    }
+  }
+
+  Future<void> loginWithApple() async {
+    state = AuthState(isLoading: true, user: state.user);
+    try {
+      final available = await SignInWithApple.isAvailable();
+      if (!available) {
+        throw Exception('Apple Sign-In is not available on this device.');
+      }
+
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: const [AppleIDAuthorizationScopes.email],
+      );
+      final idToken = credential.identityToken;
+      if (idToken == null || idToken.isEmpty) {
+        throw Exception('Apple did not return an identity token.');
+      }
+      final res = await _auth.socialApple(idToken: idToken);
+      await _tokens.write(res.token);
+      state = AuthState(isLoading: false, user: res.user);
+    } catch (e, st) {
+      state = AuthState(isLoading: false, user: state.user);
+      Error.throwWithStackTrace(e, st);
+    }
   }
 }

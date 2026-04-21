@@ -61,6 +61,20 @@ class _StubAuthApi implements AuthApi {
   }
 
   @override
+  Future<AuthResponseDto> socialGoogle({
+    required String idToken,
+    bool isPro = false,
+  }) async =>
+      throw StateError('socialGoogle not stubbed');
+
+  @override
+  Future<AuthResponseDto> socialApple({
+    required String idToken,
+    bool isPro = false,
+  }) async =>
+      throw StateError('socialApple not stubbed');
+
+  @override
   Future<UserDto> me() async {
     throw StateError('me not stubbed');
   }
@@ -148,8 +162,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const Key('sign-in-email')), 'ok@example.com');
-    await tester.enterText(find.byKey(const Key('sign-in-password')), 'password12');
+    await tester.enterText(
+        find.byKey(const Key('sign-in-email')), 'ok@example.com');
+    await tester.enterText(
+        find.byKey(const Key('sign-in-password')), 'password12');
     await tester.tap(find.byKey(const Key('sign-in-submit')));
     await tester.pumpAndSettle();
 
@@ -182,8 +198,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const Key('sign-in-email')), 'ok@example.com');
-    await tester.enterText(find.byKey(const Key('sign-in-password')), 'password12');
+    await tester.enterText(
+        find.byKey(const Key('sign-in-email')), 'ok@example.com');
+    await tester.enterText(
+        find.byKey(const Key('sign-in-password')), 'password12');
     await tester.tap(find.byKey(const Key('sign-in-submit')));
     await tester.pumpAndSettle();
 
@@ -216,8 +234,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const Key('sign-up-email')), 'taken@example.com');
-    await tester.enterText(find.byKey(const Key('sign-up-password')), 'password12');
+    await tester.enterText(
+        find.byKey(const Key('sign-up-email')), 'taken@example.com');
+    await tester.enterText(
+        find.byKey(const Key('sign-up-password')), 'password12');
     await tester.tap(find.byKey(const Key('sign-up-submit')));
     await tester.pumpAndSettle();
 

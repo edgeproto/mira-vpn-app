@@ -65,7 +65,7 @@ class ConnectCircleButton extends StatelessWidget {
               color: theme.colorScheme.primary,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.brandPrimary.withOpacity(0.35),
+                  color: AppColors.brandPrimary.withValues(alpha: 0.35),
                   blurRadius: 24,
                   spreadRadius: 2,
                 ),
@@ -118,10 +118,10 @@ class _OutlinedCircle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.6),
+          color: theme.colorScheme.outline.withValues(alpha: 0.6),
           width: 3,
         ),
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.25),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
       ),
       child: Center(child: child),
     );

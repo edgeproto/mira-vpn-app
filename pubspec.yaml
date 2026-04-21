@@ -38,6 +38,8 @@ dependencies:
   flutter_secure_storage: ^10.0.0
   # 1.0.2+ requires Dart >=3.7; stay on 1.0.1 until app sdk is bumped.
   wireguard_flutter_plus: 1.0.1
+  google_sign_in: ^7.2.0
+  sign_in_with_apple: ^7.0.1
 
 dev_dependencies:
   flutter_test:
