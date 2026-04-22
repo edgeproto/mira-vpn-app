@@ -1,6 +1,6 @@
 {
-    "name": "mira_vpn_app",
-    "short_name": "mira_vpn_app",
+    "name": "Mira VPN",
+    "short_name": "Mira VPN",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
