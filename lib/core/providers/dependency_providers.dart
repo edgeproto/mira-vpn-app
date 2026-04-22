@@ -4,6 +4,7 @@ import '../../features/auth/auth_controller.dart';
 import '../ads/ads_controller.dart';
 import '../api/api_client.dart';
 import '../api/auth_api.dart';
+import '../api/billing_api.dart';
 import '../api/wireguard_api.dart';
 import '../storage/token_store.dart';
 import '../storage/wg_config_store.dart';
@@ -23,6 +24,10 @@ final authApiProvider = Provider<AuthApi>(
 
 final wireGuardApiProvider = Provider<WireGuardApi>(
   (ref) => WireGuardApi(ref.watch(apiClientProvider).dio),
+);
+
+final billingApiProvider = Provider<BillingApi>(
+  (ref) => BillingApi(ref.watch(apiClientProvider).dio),
 );
 
 final wgConfigStoreProvider = Provider<WgConfigStore>(

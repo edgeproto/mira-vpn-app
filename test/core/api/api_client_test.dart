@@ -4,6 +4,7 @@ import 'package:http_mock_adapter/http_mock_adapter.dart';
 
 import 'package:mira_vpn_app/core/api/api_exception.dart';
 import 'package:mira_vpn_app/core/api/auth_api.dart';
+import 'package:mira_vpn_app/core/api/billing_api.dart';
 import 'package:mira_vpn_app/core/api/interceptors/auth_interceptor.dart';
 import 'package:mira_vpn_app/core/api/interceptors/error_interceptor.dart';
 import 'package:mira_vpn_app/core/api/wireguard_api.dart';
@@ -137,6 +138,33 @@ void main() {
       final cfg = await api.createConfig(location: 'Finland');
       expect(cfg.peerId, 'peer-1');
       expect(cfg.config.contains('[Interface]'), isTrue);
+    });
+
+    test('verifyPurchase posts billing token payload', () async {
+      dio.interceptors.clear();
+      dio.interceptors.addAll([
+        AuthInterceptor(getToken: () async => 'billing-token'),
+        ErrorInterceptor(),
+      ]);
+      adapter = DioAdapter(dio: dio);
+
+      adapter.onPost(
+        '/billing/verify',
+        (server) => server.reply(200, {}),
+        data: {
+          'productId': 'mira_vpn_pro_monthly',
+          'purchaseToken': 'purchase-123',
+          'platform': 'android',
+        },
+        headers: {'Authorization': 'Bearer billing-token'},
+      );
+
+      final api = BillingApi(dio);
+      await api.verifyPurchase(
+        productId: 'mira_vpn_pro_monthly',
+        purchaseToken: 'purchase-123',
+        platform: 'android',
+      );
     });
   });
 

@@ -80,6 +80,54 @@ android/
 - `applicationId` / namespace: `com.mira.mira_vpn_app` (locked — this is the Play
   Console app id for the lifetime of the app)
 
+## Billing (Step 13)
+
+- Product ids wired in app:
+  - `mira_vpn_pro_monthly`
+  - `mira_vpn_pro_annual`
+- The app sends purchase tokens to backend `POST /billing/verify`, then refreshes
+  `GET /auth/me` so `isPro` updates immediately.
+- If `/billing/verify` is not deployed yet, purchase verification will fail with a
+  clear in-app message.
+
+## Release prep (Step 14)
+
+- Configure icon/splash generation:
+  - `flutter_launcher_icons`
+  - `flutter_native_splash`
+- Add image assets before generation:
+  - `assets/icons/app_icon.png`
+  - `assets/icons/splash_logo.png`
+- Generate assets:
+
+```bash
+dart run flutter_launcher_icons
+dart run flutter_native_splash:create
+```
+
+- Release signing:
+  - Place keystore outside git.
+  - Create `android/key.properties` (already gitignored) with:
+    - `storeFile=...`
+    - `storePassword=...`
+    - `keyAlias=...`
+    - `keyPassword=...`
+- Build release bundle:
+
+```bash
+flutter build appbundle --release --dart-define=API_BASE_URL=https://api.mira-vpn.example
+```
+
+- Publish a public privacy policy URL before Play submission (required by Play and AdMob).
+
+## CI (Step 15)
+
+- GitHub Actions workflow at `.github/workflows/flutter.yml` runs:
+  - `flutter pub get`
+  - `flutter analyze`
+  - `flutter test`
+- Enable branch protection in GitHub settings and require this workflow on `main`.
+
 ## License
 
 See [LICENSE](./LICENSE).

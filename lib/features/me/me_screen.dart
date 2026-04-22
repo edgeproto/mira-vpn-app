@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/models/user_dto.dart';
+import '../../core/billing/billing_controller.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/widgets/primary_button.dart';
 import '../../core/theme/widgets/section_card.dart';
@@ -82,13 +83,7 @@ class MeScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               key: const Key('me-restore'),
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Restore purchases will be available in a later update.'),
-                  ),
-                );
-              },
+              onPressed: () => _restorePurchases(context, ref),
               icon: const Icon(Icons.restore_outlined),
               label: const Text('Restore'),
             ),
@@ -116,6 +111,14 @@ class MeScreen extends ConsumerWidget {
     await ref.read(authControllerProvider.notifier).signOut();
     if (!context.mounted) return;
     context.go('/');
+  }
+
+  Future<void> _restorePurchases(BuildContext context, WidgetRef ref) async {
+    await ref.read(billingControllerProvider.notifier).restorePurchases();
+    if (!context.mounted) return;
+    final state = ref.read(billingControllerProvider);
+    final msg = state.errorMessage ?? state.infoMessage ?? 'Restore requested.';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   void _showAbout(BuildContext context) {

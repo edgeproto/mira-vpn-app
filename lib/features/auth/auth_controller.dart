@@ -100,6 +100,20 @@ class AuthController extends Notifier<AuthState> {
     state = const AuthState(isLoading: false, user: null);
   }
 
+  Future<void> refreshMe() async {
+    final token = await _tokens.read();
+    if (token == null || token.isEmpty) {
+      state = const AuthState(isLoading: false, user: null);
+      return;
+    }
+    try {
+      final user = await _auth.me();
+      state = AuthState(isLoading: false, user: user);
+    } catch (_) {
+      // Keep previous auth state on refresh failures.
+    }
+  }
+
   Future<void> loginWithGoogle() async {
     state = AuthState(isLoading: true, user: state.user);
     try {
