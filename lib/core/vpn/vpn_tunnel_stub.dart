@@ -10,6 +10,9 @@ class StubVpnTunnelAdapter implements VpnTunnelAdapter {
   Stream<String> get stageEvents => const Stream.empty();
 
   @override
+  Stream<Map<String, dynamic>> get trafficEvents => const Stream.empty();
+
+  @override
   Future<void> initialize({
     required String interfaceName,
     String? vpnName,
@@ -31,6 +34,9 @@ class StubVpnTunnelAdapter implements VpnTunnelAdapter {
 
   @override
   Future<void> refreshStage() async {}
+
+  @override
+  Future<String> stage() async => 'disconnected';
 }
 
 VpnTunnelAdapter createVpnTunnelAdapter() => StubVpnTunnelAdapter();

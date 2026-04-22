@@ -3,6 +3,7 @@ abstract class VpnTunnelAdapter {
   bool get supported;
 
   Stream<String> get stageEvents;
+  Stream<Map<String, dynamic>> get trafficEvents;
 
   Future<void> initialize({
     required String interfaceName,
@@ -21,4 +22,5 @@ abstract class VpnTunnelAdapter {
   Future<bool> checkVpnPermission();
 
   Future<void> refreshStage();
+  Future<String> stage();
 }

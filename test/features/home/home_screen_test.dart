@@ -62,6 +62,7 @@ void main() {
     );
     expect(find.text("Couldn't connect"), findsOneWidget);
     expect(find.text('Sign in to connect'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
   });
 
   testWidgets('disconnected shows power icon; connected shows shield', (
@@ -114,5 +115,29 @@ void main() {
         );
     await tester.pump();
     expect(find.text('VPN is ON'), findsOneWidget);
+  });
+
+  testWidgets('connected with stats shows traffic rows', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: HomeContent(
+            state: HomeConnectionState.connected,
+            stats: VpnTrafficStats(
+              totalDownloadBytes: 2048,
+              totalUploadBytes: 1024,
+              downloadSpeedBps: 256,
+              uploadSpeedBps: 128,
+              uptime: Duration(minutes: 3, seconds: 30),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Download'), findsOneWidget);
+    expect(find.text('Upload'), findsOneWidget);
+    expect(find.text('Total'), findsOneWidget);
+    expect(find.text('Uptime'), findsOneWidget);
   });
 }

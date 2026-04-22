@@ -19,23 +19,45 @@ enum VpnPhase {
 }
 
 @immutable
+class VpnTrafficStats {
+  const VpnTrafficStats({
+    required this.totalDownloadBytes,
+    required this.totalUploadBytes,
+    required this.downloadSpeedBps,
+    required this.uploadSpeedBps,
+    required this.uptime,
+  });
+
+  final int totalDownloadBytes;
+  final int totalUploadBytes;
+  final double downloadSpeedBps;
+  final double uploadSpeedBps;
+  final Duration uptime;
+}
+
+@immutable
 class VpnState {
   const VpnState({
     this.phase = VpnPhase.disconnected,
     this.message,
+    this.stats,
   });
 
   final VpnPhase phase;
   final String? message;
+  final VpnTrafficStats? stats;
 
   VpnState copyWith({
     VpnPhase? phase,
     String? message,
+    VpnTrafficStats? stats,
+    bool clearStats = false,
     bool clearMessage = false,
   }) {
     return VpnState(
       phase: phase ?? this.phase,
       message: clearMessage ? null : (message ?? this.message),
+      stats: clearStats ? null : (stats ?? this.stats),
     );
   }
 }
@@ -44,14 +66,18 @@ class VpnController extends Notifier<VpnState> {
   static const _bundleId = 'com.mira.mira_vpn_app.WGExtension';
 
   StreamSubscription<String>? _stageSub;
+  StreamSubscription<Map<String, dynamic>>? _trafficSub;
   bool _tunnelInitialized = false;
   bool _listening = false;
+  bool _autoRetried = false;
 
   @override
   VpnState build() {
     ref.onDispose(() {
       _stageSub?.cancel();
+      _trafficSub?.cancel();
       _stageSub = null;
+      _trafficSub = null;
       _listening = false;
     });
 
@@ -67,6 +93,12 @@ class VpnController extends Notifier<VpnState> {
     if (adapter.supported && !_listening) {
       _listening = true;
       _stageSub = adapter.stageEvents.listen(_onTunnelStage);
+      _trafficSub = adapter.trafficEvents.listen(
+        _onTrafficEvent,
+        onError: (_, __) {
+          // Some platforms emit traffic stream errors before tunnel init.
+        },
+      );
     }
 
     return const VpnState();
@@ -84,7 +116,11 @@ class VpnController extends Notifier<VpnState> {
 
     switch (name) {
       case 'connected':
-        state = const VpnState(phase: VpnPhase.connected);
+        _autoRetried = false;
+        state = state.copyWith(
+          phase: VpnPhase.connected,
+          clearMessage: true,
+        );
         break;
       case 'denied':
         state = const VpnState(
@@ -105,14 +141,42 @@ class VpnController extends Notifier<VpnState> {
       case 'disconnecting':
       case 'exiting':
       case 'noConnection':
-        if (state.phase == VpnPhase.connected ||
-            state.phase == VpnPhase.connecting) {
+        if (state.phase == VpnPhase.preparing || state.phase == VpnPhase.connecting) {
+          if (!_autoRetried) {
+            _autoRetried = true;
+            unawaited(_retryConnectOnce());
+          } else {
+            state = const VpnState(
+              phase: VpnPhase.error,
+              message: 'Connection dropped. Tap Retry to reconnect.',
+            );
+          }
+        } else if (state.phase == VpnPhase.connected) {
+          state = const VpnState(phase: VpnPhase.disconnected);
+        } else if (state.phase == VpnPhase.error) {
+          return;
+        } else {
           state = const VpnState(phase: VpnPhase.disconnected);
         }
         break;
       default:
         break;
     }
+  }
+
+  void _onTrafficEvent(Map<String, dynamic> event) {
+    if (state.phase != VpnPhase.connected) {
+      return;
+    }
+    state = state.copyWith(
+      stats: VpnTrafficStats(
+        totalDownloadBytes: _toInt(event['totalDownload']),
+        totalUploadBytes: _toInt(event['totalUpload']),
+        downloadSpeedBps: _toDouble(event['downloadSpeed']),
+        uploadSpeedBps: _toDouble(event['uploadSpeed']),
+        uptime: _parseDuration(event['duration']),
+      ),
+    );
   }
 
   Future<void> _onSignedOut(String userId) async {
@@ -124,6 +188,12 @@ class VpnController extends Notifier<VpnState> {
     }
     await ref.read(wgConfigStoreProvider).delete(userId);
     state = const VpnState(phase: VpnPhase.disconnected);
+  }
+
+  Future<void> _retryConnectOnce() async {
+    state = const VpnState(phase: VpnPhase.connecting);
+    await Future<void>.delayed(const Duration(milliseconds: 800));
+    await _connectInternal(isAutoRetry: true);
   }
 
   /// Connect when disconnected or retry after error; disconnect when connected.
@@ -143,6 +213,11 @@ class VpnController extends Notifier<VpnState> {
   }
 
   Future<void> connect() async {
+    _autoRetried = false;
+    await _connectInternal(isAutoRetry: false);
+  }
+
+  Future<void> _connectInternal({required bool isAutoRetry}) async {
     final auth = ref.read(authControllerProvider);
     if (!auth.isSignedIn) {
       state = const VpnState(
@@ -200,7 +275,13 @@ class VpnController extends Notifier<VpnState> {
           : (api?.message ?? 'Could not create VPN configuration.');
       state = VpnState(phase: VpnPhase.error, message: msg);
     } catch (e) {
-      state = VpnState(phase: VpnPhase.error, message: e.toString());
+      final message = e.toString();
+      if (_isTransientError(message) && !_autoRetried && !isAutoRetry) {
+        _autoRetried = true;
+        unawaited(_retryConnectOnce());
+        return;
+      }
+      state = VpnState(phase: VpnPhase.error, message: message);
     }
   }
 
@@ -216,6 +297,50 @@ class VpnController extends Notifier<VpnState> {
     } catch (e) {
       state = VpnState(phase: VpnPhase.error, message: e.toString());
     }
+  }
+
+  Future<void> onAppResumed() async {
+    final adapter = ref.read(vpnTunnelAdapterProvider);
+    if (!adapter.supported) {
+      return;
+    }
+    try {
+      await adapter.refreshStage();
+      final stage = await adapter.stage();
+      _onTunnelStage(stage);
+    } catch (_) {
+      // Ignore best-effort status refresh errors when resuming.
+    }
+  }
+
+  static int _toInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static double _toDouble(Object? value) {
+    if (value is double) return value;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static Duration _parseDuration(Object? value) {
+    final raw = value?.toString() ?? '';
+    final parts = raw.split(':');
+    if (parts.length != 3) return Duration.zero;
+    final hours = int.tryParse(parts[0]) ?? 0;
+    final minutes = int.tryParse(parts[1]) ?? 0;
+    final seconds = int.tryParse(parts[2]) ?? 0;
+    return Duration(hours: hours, minutes: minutes, seconds: seconds);
+  }
+
+  static bool _isTransientError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('timed out') ||
+        lower.contains('timeout') ||
+        lower.contains('socket') ||
+        lower.contains('network');
   }
 
   @visibleForTesting

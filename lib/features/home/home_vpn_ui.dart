@@ -8,10 +8,12 @@ class HomeVpnUi {
   const HomeVpnUi({
     required this.connection,
     this.errorMessage,
+    this.stats,
   });
 
   final HomeConnectionState connection;
   final String? errorMessage;
+  final VpnTrafficStats? stats;
 
   factory HomeVpnUi.fromVpnState(VpnState vpn) {
     switch (vpn.phase) {
@@ -22,7 +24,10 @@ class HomeVpnUi {
       case VpnPhase.connecting:
         return const HomeVpnUi(connection: HomeConnectionState.connecting);
       case VpnPhase.connected:
-        return const HomeVpnUi(connection: HomeConnectionState.connected);
+        return HomeVpnUi(
+          connection: HomeConnectionState.connected,
+          stats: vpn.stats,
+        );
       case VpnPhase.error:
         return HomeVpnUi(
           connection: HomeConnectionState.error,

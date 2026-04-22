@@ -77,13 +77,18 @@ class _FakeTunnel implements VpnTunnelAdapter {
   _FakeTunnel();
 
   final _stages = StreamController<String>.broadcast();
+  final _traffic = StreamController<Map<String, dynamic>>.broadcast();
   var started = false;
+  String currentStage = 'disconnected';
 
   @override
   bool get supported => true;
 
   @override
   Stream<String> get stageEvents => _stages.stream;
+
+  @override
+  Stream<Map<String, dynamic>> get trafficEvents => _traffic.stream;
 
   @override
   Future<void> initialize({
@@ -99,20 +104,37 @@ class _FakeTunnel implements VpnTunnelAdapter {
   Future<void> refreshStage() async {}
 
   @override
+  Future<String> stage() async => currentStage;
+
+  @override
   Future<void> startVpn({
     required String serverAddress,
     required String wgQuickConfig,
     required String providerBundleIdentifier,
   }) async {
     started = true;
+    currentStage = 'connecting';
     _stages.add('connecting');
-    scheduleMicrotask(() => _stages.add('connected'));
+    scheduleMicrotask(() {
+      currentStage = 'connected';
+      _stages.add('connected');
+    });
   }
 
   @override
   Future<void> stopVpn() async {
     started = false;
+    currentStage = 'disconnected';
     _stages.add('disconnected');
+  }
+
+  void emitTraffic(Map<String, dynamic> event) {
+    _traffic.add(event);
+  }
+
+  void emitStage(String stage) {
+    currentStage = stage;
+    _stages.add(stage);
   }
 }
 
@@ -245,6 +267,110 @@ void main() {
       final s = container.read(vpnControllerProvider);
       expect(s.phase, VpnPhase.error);
       expect(s.message, contains('not available'));
+    });
+
+    test('connected traffic stream updates vpn stats', () async {
+      final tunnel = _FakeTunnel();
+      const dto = WireGuardConfigDto(
+        location: 'Finland',
+        peerId: 'p1',
+        address: '10.0.0.2',
+        publicKey: 'pub',
+        config: _sampleIni,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authControllerProvider.overrideWith(_SignedInAuth.new),
+          vpnTunnelAdapterProvider.overrideWithValue(tunnel),
+          wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
+          wireGuardApiProvider.overrideWithValue(
+            const _FakeWireGuardApi(dto: dto),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(vpnControllerProvider);
+      await container.read(vpnControllerProvider.notifier).connect();
+      await _waitUntil(
+        () => container.read(vpnControllerProvider).phase == VpnPhase.connected,
+      );
+
+      tunnel.emitTraffic({
+        'totalDownload': 2048,
+        'totalUpload': 1024,
+        'downloadSpeed': 256.0,
+        'uploadSpeed': 128.0,
+        'duration': '00:03:30',
+      });
+      await _waitUntil(
+        () => container.read(vpnControllerProvider).stats != null,
+      );
+      final stats = container.read(vpnControllerProvider).stats;
+      expect(stats?.totalDownloadBytes, 2048);
+      expect(stats?.totalUploadBytes, 1024);
+      expect(stats?.uptime, const Duration(minutes: 3, seconds: 30));
+    });
+
+    test('revoked tunnel updates state to disconnected', () async {
+      final tunnel = _FakeTunnel();
+      const dto = WireGuardConfigDto(
+        location: 'Finland',
+        peerId: 'p1',
+        address: '10.0.0.2',
+        publicKey: 'pub',
+        config: _sampleIni,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          authControllerProvider.overrideWith(_SignedInAuth.new),
+          vpnTunnelAdapterProvider.overrideWithValue(tunnel),
+          wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
+          wireGuardApiProvider.overrideWithValue(
+            const _FakeWireGuardApi(dto: dto),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(vpnControllerProvider);
+      await container.read(vpnControllerProvider.notifier).connect();
+      await _waitUntil(
+        () => container.read(vpnControllerProvider).phase == VpnPhase.connected,
+      );
+      tunnel.emitStage('disconnected');
+      await _waitUntil(
+        () =>
+            container.read(vpnControllerProvider).phase == VpnPhase.disconnected,
+      );
+      expect(container.read(vpnControllerProvider).stats, isNull);
+    });
+
+    test('resume refresh reflects current connected stage', () async {
+      final tunnel = _FakeTunnel()..currentStage = 'connected';
+      final container = ProviderContainer(
+        overrides: [
+          authControllerProvider.overrideWith(_SignedInAuth.new),
+          vpnTunnelAdapterProvider.overrideWithValue(tunnel),
+          wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
+          wireGuardApiProvider.overrideWithValue(
+            const _FakeWireGuardApi(
+              dto: WireGuardConfigDto(
+                location: 'Finland',
+                peerId: 'p1',
+                address: '10.0.0.2',
+                publicKey: 'pub',
+                config: _sampleIni,
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(vpnControllerProvider);
+      await container.read(vpnControllerProvider.notifier).onAppResumed();
+      expect(container.read(vpnControllerProvider).phase, VpnPhase.connected);
     });
   });
 }

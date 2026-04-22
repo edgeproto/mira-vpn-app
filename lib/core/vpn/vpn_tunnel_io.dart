@@ -11,6 +11,10 @@ class NativeVpnTunnelAdapter implements VpnTunnelAdapter {
       WireGuardFlutter.instance.vpnStageSnapshot.map((e) => e.name);
 
   @override
+  Stream<Map<String, dynamic>> get trafficEvents =>
+      WireGuardFlutter.instance.trafficSnapshot;
+
+  @override
   Future<void> initialize({
     required String interfaceName,
     String? vpnName,
@@ -45,6 +49,9 @@ class NativeVpnTunnelAdapter implements VpnTunnelAdapter {
 
   @override
   Future<void> refreshStage() => WireGuardFlutter.instance.refreshStage();
+
+  @override
+  Future<String> stage() => WireGuardFlutter.instance.stage().then((s) => s.name);
 }
 
 VpnTunnelAdapter createVpnTunnelAdapter() => NativeVpnTunnelAdapter();
