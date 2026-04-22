@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:mira_vpn_app/core/ads/ads_controller.dart';
+import 'package:mira_vpn_app/core/providers/dependency_providers.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_controller.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_providers.dart';
 import 'package:mira_vpn_app/features/home/home_connection_state.dart';
@@ -140,4 +142,83 @@ void main() {
     expect(find.text('Total'), findsOneWidget);
     expect(find.text('Uptime'), findsOneWidget);
   });
+
+  testWidgets('free tier shows interstitial before connect press', (
+    WidgetTester tester,
+  ) async {
+    final ads = _FakeAdsController();
+    final vpn = _CountingVpnController();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          adsControllerProvider.overrideWithValue(ads),
+          isFreeTierProvider.overrideWithValue(true),
+          vpnControllerProvider.overrideWith(() => vpn),
+        ],
+        child: const MaterialApp(home: HomeScreen()),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.power_settings_new_rounded));
+    await tester.pump();
+
+    expect(ads.interstitialCalls, 1);
+    expect(vpn.pressCount, 1);
+  });
+
+  testWidgets('pro tier skips interstitial before connect press', (
+    WidgetTester tester,
+  ) async {
+    final ads = _FakeAdsController();
+    final vpn = _CountingVpnController();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          adsControllerProvider.overrideWithValue(ads),
+          isFreeTierProvider.overrideWithValue(false),
+          vpnControllerProvider.overrideWith(() => vpn),
+        ],
+        child: const MaterialApp(home: HomeScreen()),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byIcon(Icons.power_settings_new_rounded));
+    await tester.pump();
+
+    expect(ads.interstitialCalls, 0);
+    expect(vpn.pressCount, 1);
+  });
+}
+
+class _FakeAdsController implements AdsController {
+  int interstitialCalls = 0;
+
+  @override
+  bool get supportsAds => true;
+
+  @override
+  bool shouldShowBanner({required bool isFreeTier}) => isFreeTier;
+
+  @override
+  Future<void> showInterstitialBeforeConnectIfEligible({
+    required bool isFreeTier,
+  }) async {
+    if (isFreeTier) {
+      interstitialCalls++;
+    }
+  }
+}
+
+class _CountingVpnController extends VpnController {
+  int pressCount = 0;
+
+  @override
+  VpnState build() => const VpnState(phase: VpnPhase.disconnected);
+
+  @override
+  Future<void> onCirclePressed() async {
+    pressCount++;
+  }
 }

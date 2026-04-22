@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/auth/auth_controller.dart';
+import '../ads/ads_controller.dart';
 import '../api/api_client.dart';
 import '../api/auth_api.dart';
 import '../api/wireguard_api.dart';
@@ -30,3 +32,13 @@ final wgConfigStoreProvider = Provider<WgConfigStore>(
 final vpnTunnelAdapterProvider = Provider<VpnTunnelAdapter>(
   (ref) => createVpnTunnelAdapter(),
 );
+
+final adsControllerProvider = Provider<AdsController>(
+  (ref) => GoogleMobileAdsController(),
+);
+
+final isFreeTierProvider = Provider<bool>((ref) {
+  final auth = ref.watch(authControllerProvider);
+  final user = auth.user;
+  return user == null || !user.isPro;
+});

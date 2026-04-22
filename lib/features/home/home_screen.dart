@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import '../../core/ads/admob_config.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/widgets/section_card.dart';
+import '../../core/providers/dependency_providers.dart';
 import '../../core/vpn/vpn_controller.dart';
 import '../../core/vpn/vpn_providers.dart';
 import 'home_connection_state.dart';
@@ -40,6 +43,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final ui = ref.watch(homeVpnUiProvider);
+    final isFreeTier = ref.watch(isFreeTierProvider);
+    final ads = ref.watch(adsControllerProvider);
+    final showBanner = ads.shouldShowBanner(isFreeTier: isFreeTier);
 
     return Scaffold(
       body: SafeArea(
@@ -49,12 +55,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             state: ui.connection,
             errorMessage: ui.errorMessage,
             stats: ui.stats,
-            onCirclePressed: () =>
-                ref.read(vpnControllerProvider.notifier).onCirclePressed(),
+            onCirclePressed: () => _onCirclePressed(isFreeTier: isFreeTier),
           ),
         ),
       ),
+      bottomNavigationBar: showBanner ? const _HomeBannerAd() : null,
     );
+  }
+
+  Future<void> _onCirclePressed({required bool isFreeTier}) async {
+    final vpn = ref.read(vpnControllerProvider);
+    if (vpn.phase == VpnPhase.disconnected || vpn.phase == VpnPhase.error) {
+      await ref
+          .read(adsControllerProvider)
+          .showInterstitialBeforeConnectIfEligible(isFreeTier: isFreeTier);
+    }
+    await ref.read(vpnControllerProvider.notifier).onCirclePressed();
   }
 }
 
@@ -217,4 +233,65 @@ String _formatUptime(Duration duration) {
   final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
   final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
   return '$hours:$minutes:$seconds';
+}
+
+class _HomeBannerAd extends StatefulWidget {
+  const _HomeBannerAd();
+
+  @override
+  State<_HomeBannerAd> createState() => _HomeBannerAdState();
+}
+
+class _HomeBannerAdState extends State<_HomeBannerAd> {
+  BannerAd? _ad;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ad = BannerAd(
+      adUnitId: AdMobConfig.bannerUnitId,
+      request: const AdRequest(),
+      size: AdSize.banner,
+      listener: BannerAdListener(
+        onAdLoaded: (ad) {
+          if (mounted) {
+            setState(() => _loaded = true);
+          }
+        },
+        onAdFailedToLoad: (ad, _) {
+          ad.dispose();
+          if (mounted) {
+            setState(() {
+              _ad = null;
+              _loaded = false;
+            });
+          }
+        },
+      ),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _ad?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ad = _ad;
+    if (!_loaded || ad == null) {
+      return const SizedBox.shrink();
+    }
+    return SafeArea(
+      top: false,
+      child: SizedBox(
+        key: const Key('home_ad_banner'),
+        width: ad.size.width.toDouble(),
+        height: ad.size.height.toDouble(),
+        child: AdWidget(ad: ad),
+      ),
+    );
+  }
 }
