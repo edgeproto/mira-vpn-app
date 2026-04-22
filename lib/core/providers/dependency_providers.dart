@@ -6,6 +6,7 @@ import '../api/api_client.dart';
 import '../api/auth_api.dart';
 import '../api/billing_api.dart';
 import '../api/wireguard_api.dart';
+import '../storage/guest_device_store.dart';
 import '../storage/token_store.dart';
 import '../storage/wg_config_store.dart';
 import '../vpn/vpn_tunnel.dart';
@@ -32,6 +33,10 @@ final billingApiProvider = Provider<BillingApi>(
 
 final wgConfigStoreProvider = Provider<WgConfigStore>(
   (ref) => SecureWgConfigStore(),
+);
+
+final guestDeviceStoreProvider = Provider<GuestDeviceStore>(
+  (ref) => SecureGuestDeviceStore(),
 );
 
 final vpnTunnelAdapterProvider = Provider<VpnTunnelAdapter>(

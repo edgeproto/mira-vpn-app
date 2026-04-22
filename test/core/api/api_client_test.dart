@@ -140,6 +140,28 @@ void main() {
       expect(cfg.config.contains('[Interface]'), isTrue);
     });
 
+    test('createGuestConfig posts device id without bearer token', () async {
+      adapter.onPost(
+        '/wireguard/config/guest',
+        (server) => server.reply(
+          201,
+          {
+            'location': 'Finland',
+            'peerId': 'guest-peer-1',
+            'address': '10.0.0.3/32',
+            'publicKey': 'guest+base64=',
+            'config': '[Interface]\nPrivateKey=...\n',
+          },
+        ),
+        data: {'deviceId': 'guest-dev-1', 'location': 'Finland'},
+      );
+
+      final api = WireGuardApi(dio);
+      final cfg = await api.createGuestConfig(deviceId: 'guest-dev-1');
+      expect(cfg.peerId, 'guest-peer-1');
+      expect(cfg.location, 'Finland');
+    });
+
     test('verifyPurchase posts billing token payload', () async {
       dio.interceptors.clear();
       dio.interceptors.addAll([

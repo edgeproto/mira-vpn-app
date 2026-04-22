@@ -14,4 +14,18 @@ class WireGuardApi {
     );
     return WireGuardConfigDto.fromJson(res.data!);
   }
+
+  Future<WireGuardConfigDto> createGuestConfig({
+    required String deviceId,
+    String location = 'Finland',
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/wireguard/config/guest',
+      data: <String, dynamic>{
+        'deviceId': deviceId,
+        'location': location,
+      },
+    );
+    return WireGuardConfigDto.fromJson(res.data!);
+  }
 }

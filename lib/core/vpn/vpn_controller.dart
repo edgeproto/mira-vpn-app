@@ -219,14 +219,6 @@ class VpnController extends Notifier<VpnState> {
 
   Future<void> _connectInternal({required bool isAutoRetry}) async {
     final auth = ref.read(authControllerProvider);
-    if (!auth.isSignedIn) {
-      state = const VpnState(
-        phase: VpnPhase.error,
-        message: 'Sign in to connect',
-      );
-      return;
-    }
-
     final adapter = ref.read(vpnTunnelAdapterProvider);
     if (!adapter.supported) {
       state = const VpnState(
@@ -236,7 +228,7 @@ class VpnController extends Notifier<VpnState> {
       return;
     }
 
-    final userId = auth.user!.id;
+    final userId = auth.user?.id ?? 'guest';
     state = const VpnState(phase: VpnPhase.preparing);
 
     try {
@@ -244,7 +236,12 @@ class VpnController extends Notifier<VpnState> {
       final api = ref.read(wireGuardApiProvider);
       var config = await store.read(userId);
       if (config == null || config.isEmpty) {
-        final dto = await api.createConfig();
+        final dto = auth.isSignedIn
+            ? await api.createConfig()
+            : await api.createGuestConfig(
+                deviceId:
+                    await ref.read(guestDeviceStoreProvider).readOrCreateDeviceId(),
+              );
         config = dto.config;
         await store.write(userId, config);
       }

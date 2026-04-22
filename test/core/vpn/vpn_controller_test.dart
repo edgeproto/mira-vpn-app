@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mira_vpn_app/core/api/models/wireguard_config_dto.dart';
 import 'package:mira_vpn_app/core/api/wireguard_api.dart';
 import 'package:mira_vpn_app/core/providers/dependency_providers.dart';
+import 'package:mira_vpn_app/core/storage/guest_device_store.dart';
 import 'package:mira_vpn_app/core/storage/wg_config_store.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_controller.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_providers.dart';
@@ -59,9 +60,10 @@ class _MemoryWgStore implements WgConfigStore {
 }
 
 class _FakeWireGuardApi implements WireGuardApi {
-  const _FakeWireGuardApi({this.dto, this.error});
+  const _FakeWireGuardApi({this.dto, this.guestDto, this.error});
 
   final WireGuardConfigDto? dto;
+  final WireGuardConfigDto? guestDto;
   final Object? error;
 
   @override
@@ -71,6 +73,25 @@ class _FakeWireGuardApi implements WireGuardApi {
     }
     return dto!;
   }
+
+  @override
+  Future<WireGuardConfigDto> createGuestConfig({
+    required String deviceId,
+    String location = 'Finland',
+  }) async {
+    if (error != null) {
+      Error.throwWithStackTrace(error!, StackTrace.current);
+    }
+    return guestDto ?? dto!;
+  }
+}
+
+class _FakeGuestDeviceStore implements GuestDeviceStore {
+  const _FakeGuestDeviceStore(this.deviceId);
+  final String deviceId;
+
+  @override
+  Future<String> readOrCreateDeviceId() async => deviceId;
 }
 
 class _FakeTunnel implements VpnTunnelAdapter {
@@ -181,18 +202,21 @@ void main() {
       expect(tunnel.started, isTrue);
     });
 
-    test('connect without sign-in sets error', () async {
+    test('connect without sign-in uses guest config and connects', () async {
       final tunnel = _FakeTunnel();
       final container = ProviderContainer(
         overrides: [
           authControllerProvider.overrideWith(_SignedOutAuth.new),
           vpnTunnelAdapterProvider.overrideWithValue(tunnel),
           wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
+          guestDeviceStoreProvider.overrideWithValue(
+            const _FakeGuestDeviceStore('guest-dev-1'),
+          ),
           wireGuardApiProvider.overrideWithValue(
             const _FakeWireGuardApi(
-              dto: WireGuardConfigDto(
+              guestDto: WireGuardConfigDto(
                 location: 'Finland',
-                peerId: 'p1',
+                peerId: 'guest-peer',
                 address: '10.0.0.2',
                 publicKey: 'pub',
                 config: _sampleIni,
@@ -205,10 +229,10 @@ void main() {
 
       container.read(vpnControllerProvider);
       await container.read(vpnControllerProvider.notifier).connect();
-      final s = container.read(vpnControllerProvider);
-      expect(s.phase, VpnPhase.error);
-      expect(s.message, contains('Sign in'));
-      expect(tunnel.started, isFalse);
+      await _waitUntil(
+        () => container.read(vpnControllerProvider).phase == VpnPhase.connected,
+      );
+      expect(tunnel.started, isTrue);
     });
 
     test('connect maps 409 to error message', () async {
