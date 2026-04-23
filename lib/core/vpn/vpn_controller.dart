@@ -273,9 +273,23 @@ class VpnController extends Notifier<VpnState> {
       state = VpnState(phase: VpnPhase.error, message: msg);
     } catch (e) {
       final message = e.toString();
+      if (_isBadConfigError(message) && !_autoRetried) {
+        _autoRetried = true;
+        await ref.read(wgConfigStoreProvider).delete(userId);
+        await _connectInternal(isAutoRetry: true);
+        return;
+      }
       if (_isTransientError(message) && !_autoRetried && !isAutoRetry) {
         _autoRetried = true;
         unawaited(_retryConnectOnce());
+        return;
+      }
+      if (_isBadConfigError(message)) {
+        state = const VpnState(
+          phase: VpnPhase.error,
+          message:
+              'Invalid VPN profile received from server. Please reconnect to fetch a fresh profile.',
+        );
         return;
       }
       state = VpnState(phase: VpnPhase.error, message: message);
@@ -338,6 +352,13 @@ class VpnController extends Notifier<VpnState> {
         lower.contains('timeout') ||
         lower.contains('socket') ||
         lower.contains('network');
+  }
+
+  static bool _isBadConfigError(String message) {
+    final lower = message.toLowerCase();
+    return lower.contains('badconfigexception') ||
+        lower.contains('can\'t connect to tunnel') ||
+        lower.contains('invalid wg-quick config');
   }
 
   @visibleForTesting
