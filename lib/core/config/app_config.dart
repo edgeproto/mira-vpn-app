@@ -7,8 +7,8 @@
 class AppConfig {
   AppConfig._();
 
-  /// Default when `API_BASE_URL` is not passed (Android emulator → host loopback).
-  static const String kDefaultApiBaseUrl = 'http://10.0.2.2:8080';
+  /// Default when `API_BASE_URL` is not passed.
+  static const String kDefaultApiBaseUrl = 'http://95.217.206.233:18080';
 
   /// Backend base URL (no trailing slash).
   static String get apiBaseUrl => const String.fromEnvironment(

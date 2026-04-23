@@ -22,11 +22,11 @@ flutter analyze
 flutter test
 ```
 
-Run against a local backend (emulator loopback to host):
+Run against your current backend:
 
 ```bash
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
-# or: ./run_dev.sh   (defaults API_BASE_URL; override: API_BASE_URL=http://host:8080 ./run_dev.sh)
+flutter run --dart-define=API_BASE_URL=http://95.217.206.233:18080
+# or: ./run_dev.sh   (defaults API_BASE_URL; override: API_BASE_URL=http://host:18080 ./run_dev.sh)
 ```
 
 Run against a deployed backend:
