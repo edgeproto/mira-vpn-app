@@ -65,8 +65,6 @@ class VpnState {
 class VpnController extends Notifier<VpnState> {
   static const _bundleId = 'com.mira.mira_vpn_app.WGExtension';
   static const _initializeTimeout = Duration(seconds: 20);
-  static const _permissionTimeout = Duration(seconds: 30);
-  static const _postPermissionSettleDelay = Duration(milliseconds: 1200);
   static const _firstStartTimeout = Duration(seconds: 45);
   static const _startTimeout = Duration(seconds: 20);
 
@@ -297,20 +295,6 @@ class VpnController extends Notifier<VpnState> {
         _tunnelInitialized = true;
       }
 
-      final permissionGranted = await adapter.checkVpnPermission().timeout(
-        _permissionTimeout,
-      );
-      if (!permissionGranted) {
-        state = const VpnState(
-          phase: VpnPhase.error,
-          message: 'VPN permission was denied',
-        );
-        return;
-      }
-      // On some Android emulators, prepare() reports stale state if start
-      // immediately follows the consent flow.
-      await Future<void>.delayed(_postPermissionSettleDelay);
-
       final endpoint =
           parseWireGuardEndpoint(config) ?? '127.0.0.1:51820';
 
@@ -341,16 +325,6 @@ class VpnController extends Notifier<VpnState> {
       if (_isBadConfigError(message) && !_autoRetried) {
         _autoRetried = true;
         await ref.read(wgConfigStoreProvider).delete(userId);
-        unawaited(
-          Future<void>(
-            () => _performConnect(isAutoRetry: true, resetAutoRetry: false),
-          ),
-        );
-        return;
-      }
-      if (_isPermissionRaceError(message) && !_autoRetried && !isAutoRetry) {
-        _autoRetried = true;
-        await Future<void>.delayed(const Duration(seconds: 1));
         unawaited(
           Future<void>(
             () => _performConnect(isAutoRetry: true, resetAutoRetry: false),
@@ -438,15 +412,6 @@ class VpnController extends Notifier<VpnState> {
     return lower.contains('badconfigexception') ||
         lower.contains('can\'t connect to tunnel') ||
         lower.contains('invalid wg-quick config');
-  }
-
-  static bool _isPermissionRaceError(String message) {
-    final lower = message.toLowerCase();
-    return lower.contains('vpn is not active') ||
-        lower.contains('failed to prepare vpn') ||
-        lower.contains('permission denied') ||
-        lower.contains('does not belong to uid') ||
-        lower.contains('cannot noteoperation');
   }
 
   @visibleForTesting
