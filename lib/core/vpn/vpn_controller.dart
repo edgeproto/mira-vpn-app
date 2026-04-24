@@ -234,8 +234,9 @@ class VpnController extends Notifier<VpnState> {
     try {
       final store = ref.read(wgConfigStoreProvider);
       final api = ref.read(wireGuardApiProvider);
-      var config = await store.read(userId);
-      if (config == null || config.isEmpty) {
+      final cached = await store.read(userId);
+      late final String config;
+      try {
         final dto = auth.isSignedIn
             ? await api.createConfig()
             : await api.createGuestConfig(
@@ -244,6 +245,17 @@ class VpnController extends Notifier<VpnState> {
               );
         config = dto.config;
         await store.write(userId, config);
+      } on DioException catch (e) {
+        if (cached != null &&
+            cached.isNotEmpty &&
+            (e.type == DioExceptionType.connectionTimeout ||
+                e.type == DioExceptionType.sendTimeout ||
+                e.type == DioExceptionType.receiveTimeout ||
+                e.type == DioExceptionType.connectionError)) {
+          config = cached;
+        } else {
+          rethrow;
+        }
       }
 
       state = const VpnState(phase: VpnPhase.connecting);
