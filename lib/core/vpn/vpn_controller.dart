@@ -64,7 +64,8 @@ class VpnState {
 
 class VpnController extends Notifier<VpnState> {
   static const _bundleId = 'com.mira.mira_vpn_app.WGExtension';
-  static const _initializeTimeout = Duration(seconds: 12);
+  static const _initializeTimeout = Duration(seconds: 20);
+  static const _firstStartTimeout = Duration(seconds: 45);
   static const _startTimeout = Duration(seconds: 20);
 
   StreamSubscription<String>? _stageSub;
@@ -232,6 +233,7 @@ class VpnController extends Notifier<VpnState> {
 
     final userId = auth.user?.id ?? 'guest';
     state = const VpnState(phase: VpnPhase.preparing);
+    final isFirstTunnelStart = !_tunnelInitialized;
 
     try {
       final store = ref.read(wgConfigStoreProvider);
@@ -277,7 +279,7 @@ class VpnController extends Notifier<VpnState> {
         serverAddress: endpoint,
         wgQuickConfig: config,
         providerBundleIdentifier: _bundleId,
-      ).timeout(_startTimeout);
+      ).timeout(isFirstTunnelStart ? _firstStartTimeout : _startTimeout);
     } on DioException catch (e) {
       final code = e.response?.statusCode;
       final api = ApiException.fromDio(e);
@@ -288,10 +290,12 @@ class VpnController extends Notifier<VpnState> {
     } catch (e) {
       final message = e.toString();
       if (e is TimeoutException) {
-        state = const VpnState(
+        state = VpnState(
           phase: VpnPhase.error,
           message:
-              'VPN startup timed out. Tap Retry. If this is first launch, reopen the app and try again.',
+              isFirstTunnelStart
+                  ? 'VPN startup is taking longer than expected on first run. Tap Retry.'
+                  : 'VPN startup timed out. Tap Retry.',
         );
         return;
       }
