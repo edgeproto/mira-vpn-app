@@ -73,6 +73,7 @@ class VpnController extends Notifier<VpnState> {
   bool _tunnelInitialized = false;
   bool _listening = false;
   bool _autoRetried = false;
+  bool _connectInFlight = false;
 
   @override
   VpnState build() {
@@ -144,6 +145,11 @@ class VpnController extends Notifier<VpnState> {
       case 'disconnecting':
       case 'exiting':
       case 'noConnection':
+        if (_connectInFlight) {
+          // During initial prepare/permission flow, transient disconnected
+          // stages are expected; avoid kicking off overlapping retries.
+          return;
+        }
         if (state.phase == VpnPhase.preparing || state.phase == VpnPhase.connecting) {
           if (!_autoRetried) {
             _autoRetried = true;
@@ -196,7 +202,7 @@ class VpnController extends Notifier<VpnState> {
   Future<void> _retryConnectOnce() async {
     state = const VpnState(phase: VpnPhase.connecting);
     await Future<void>.delayed(const Duration(milliseconds: 800));
-    await _connectInternal(isAutoRetry: true);
+    await _performConnect(isAutoRetry: true, resetAutoRetry: false);
   }
 
   /// Connect when disconnected or retry after error; disconnect when connected.
@@ -216,8 +222,25 @@ class VpnController extends Notifier<VpnState> {
   }
 
   Future<void> connect() async {
-    _autoRetried = false;
-    await _connectInternal(isAutoRetry: false);
+    await _performConnect(isAutoRetry: false, resetAutoRetry: true);
+  }
+
+  Future<void> _performConnect({
+    required bool isAutoRetry,
+    required bool resetAutoRetry,
+  }) async {
+    if (_connectInFlight) {
+      return;
+    }
+    if (resetAutoRetry) {
+      _autoRetried = false;
+    }
+    _connectInFlight = true;
+    try {
+      await _connectInternal(isAutoRetry: isAutoRetry);
+    } finally {
+      _connectInFlight = false;
+    }
   }
 
   Future<void> _connectInternal({required bool isAutoRetry}) async {
@@ -302,7 +325,11 @@ class VpnController extends Notifier<VpnState> {
       if (_isBadConfigError(message) && !_autoRetried) {
         _autoRetried = true;
         await ref.read(wgConfigStoreProvider).delete(userId);
-        await _connectInternal(isAutoRetry: true);
+        unawaited(
+          Future<void>(
+            () => _performConnect(isAutoRetry: true, resetAutoRetry: false),
+          ),
+        );
         return;
       }
       if (_isTransientError(message) && !_autoRetried && !isAutoRetry) {
