@@ -30,7 +30,22 @@ void main() {
           ),
         ),
       ),
-      'Server error. Please try again later.',
+      'upstream',
+    );
+
+    expect(
+      authErrorMessage(
+        DioException(
+          requestOptions: RequestOptions(),
+          response: Response(
+            requestOptions: RequestOptions(),
+            statusCode: 500,
+            data: '',
+            statusMessage: 'Internal Server Error',
+          ),
+        ),
+      ),
+      'Internal Server Error',
     );
   });
 }
