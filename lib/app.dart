@@ -69,31 +69,14 @@ class _BootSplashOverlay extends StatefulWidget {
 }
 
 class _BootSplashOverlayState extends State<_BootSplashOverlay> {
-  static const _splashAspectRatio = 473 / 1024;
-
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
       ignoring: true,
-      child: ColoredBox(
-        color: const Color(0xFF061B57),
-        child: Center(
-          child: AspectRatio(
-            aspectRatio: _splashAspectRatio,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.asset(
-                      'assets/icons/splash_logo.png',
-                      fit: BoxFit.cover,
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
+      child: SizedBox.expand(
+        child: Image.asset(
+          'assets/icons/splash_logo.png',
+          fit: BoxFit.fill,
         ),
       ),
     );
