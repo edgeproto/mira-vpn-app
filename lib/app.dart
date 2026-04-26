@@ -39,9 +39,8 @@ class _MiraVpnAppState extends ConsumerState<MiraVpnApp> {
   Widget build(BuildContext context) {
     ref.watch(authControllerProvider);
     ref.watch(vpnControllerProvider);
-    final auth = ref.watch(authControllerProvider);
     final router = ref.watch(goRouterProvider);
-    final showBootSplash = !_isTestEnv && (!_minSplashElapsed || auth.isLoading);
+    final showBootSplash = !_isTestEnv && !_minSplashElapsed;
 
     return MaterialApp.router(
       title: 'Mira VPN',
