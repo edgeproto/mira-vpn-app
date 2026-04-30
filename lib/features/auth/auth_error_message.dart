@@ -21,7 +21,9 @@ String authErrorMessage(Object error) {
         return msg.isNotEmpty ? msg : 'Check your input and try again.';
       }
       if (code >= 500) {
-        return 'Server error. Please try again later.';
+        return msg.isNotEmpty
+            ? msg
+            : 'Server error. Please try again later.';
       }
       return msg.isNotEmpty ? msg : 'Something went wrong.';
     }
