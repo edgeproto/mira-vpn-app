@@ -11,7 +11,6 @@ import 'package:mira_vpn_app/core/providers/dependency_providers.dart';
 import 'package:mira_vpn_app/core/storage/guest_device_store.dart';
 import 'package:mira_vpn_app/core/storage/wg_config_store.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_controller.dart';
-import 'package:mira_vpn_app/core/vpn/vpn_location_provider.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_providers.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_tunnel_contract.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_tunnel_stub.dart';

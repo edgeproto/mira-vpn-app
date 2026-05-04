@@ -7,7 +7,6 @@ import 'package:mira_vpn_app/core/ads/ads_controller.dart';
 import 'package:mira_vpn_app/core/api/models/wireguard_location_dto.dart';
 import 'package:mira_vpn_app/core/providers/dependency_providers.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_controller.dart';
-import 'package:mira_vpn_app/core/vpn/vpn_location_provider.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_providers.dart';
 import 'package:mira_vpn_app/features/home/home_connection_state.dart';
 import 'package:mira_vpn_app/features/home/home_screen.dart';
