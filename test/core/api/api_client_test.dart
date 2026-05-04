@@ -157,9 +157,42 @@ void main() {
       );
 
       final api = WireGuardApi(dio);
-      final cfg = await api.createGuestConfig(deviceId: 'guest-dev-1');
+      final cfg = await api.createGuestConfig(
+        deviceId: 'guest-dev-1',
+        location: 'Finland',
+      );
       expect(cfg.peerId, 'guest-peer-1');
       expect(cfg.location, 'Finland');
+    });
+
+    test('listLocations returns display names', () async {
+      adapter.onGet(
+        '/wireguard/locations',
+        (server) => server.reply(
+          200,
+          {
+            'locations': [
+              {
+                'name': 'Finland',
+                'displayName': 'Helsinki',
+                'country': 'FI',
+              },
+              {
+                'name': 'Germany',
+                'displayName': 'Frankfurt',
+              },
+            ],
+          },
+        ),
+      );
+
+      final api = WireGuardApi(dio);
+      final list = await api.listLocations();
+      expect(list.length, 2);
+      expect(list[0].name, 'Finland');
+      expect(list[0].displayName, 'Helsinki');
+      expect(list[0].country, 'FI');
+      expect(list[1].name, 'Germany');
     });
 
     test('verifyPurchase posts billing token payload', () async {
@@ -249,7 +282,7 @@ void main() {
 
       final api = WireGuardApi(dio);
       await expectLater(
-        api.createConfig(),
+        api.createConfig(location: 'Finland'),
         throwsA(
           predicate<DioException>((e) {
             expect(e.error, isA<ApiException>());

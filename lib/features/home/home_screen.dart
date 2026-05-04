@@ -6,6 +6,7 @@ import '../../core/ads/admob_config.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/widgets/section_card.dart';
 import '../../core/providers/dependency_providers.dart';
+import '../../core/api/models/wireguard_location_dto.dart';
 import '../../core/vpn/vpn_controller.dart';
 import '../../core/vpn/vpn_providers.dart';
 import 'home_connection_state.dart';
@@ -56,6 +57,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             errorMessage: ui.errorMessage,
             stats: ui.stats,
             onCirclePressed: () => _onCirclePressed(isFreeTier: isFreeTier),
+            serverLocationLabel: ref.watch(vpnLocationControllerProvider).when(
+                  data: (s) => s.displayLabel,
+                  loading: () => '…',
+                  error: (_, __) => 'Finland',
+                ),
+            onLocationTap: () => _showLocationPicker(context),
           ),
         ),
       ),
@@ -72,6 +79,56 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
     await ref.read(vpnControllerProvider.notifier).onCirclePressed();
   }
+
+  Future<void> _showLocationPicker(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        return Consumer(
+          builder: (BuildContext context, WidgetRef ref, _) {
+            final async = ref.watch(vpnLocationControllerProvider);
+            return async.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(AppSpacing.xl),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (Object e, _) => Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text('Could not load servers ($e)'),
+              ),
+              data: (VpnLocationState s) => ListView(
+                shrinkWrap: true,
+                children: <Widget>[
+                  for (final WireguardLocationDto loc in s.locations)
+                    ListTile(
+                      title: Text(loc.displayName),
+                      subtitle: (loc.country ?? '').isEmpty
+                          ? null
+                          : Text(loc.country!),
+                      trailing: loc.name == s.selectedName
+                          ? Icon(
+                              Icons.check_rounded,
+                              color: Theme.of(context).colorScheme.primary,
+                            )
+                          : null,
+                      onTap: () async {
+                        await ref
+                            .read(vpnLocationControllerProvider.notifier)
+                            .selectLocation(loc.name);
+                        if (sheetContext.mounted) {
+                          Navigator.of(sheetContext).pop();
+                        }
+                      },
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 }
 
 @visibleForTesting
@@ -82,12 +139,16 @@ class HomeContent extends StatelessWidget {
     this.errorMessage,
     this.stats,
     this.onCirclePressed,
+    this.serverLocationLabel = 'Finland',
+    this.onLocationTap,
   });
 
   final HomeConnectionState state;
   final String? errorMessage;
   final VpnTrafficStats? stats;
   final VoidCallback? onCirclePressed;
+  final String serverLocationLabel;
+  final VoidCallback? onLocationTap;
 
   @override
   Widget build(BuildContext context) {
@@ -162,24 +223,34 @@ class HomeContent extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
         ],
         SectionCard(
-          child: Row(
-            children: [
-              Icon(
-                Icons.public_rounded,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  'Finland',
-                  style: theme.textTheme.titleMedium,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onLocationTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.public_rounded,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        serverLocationLabel,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ],
+            ),
           ),
         ),
         const Spacer(flex: 3),

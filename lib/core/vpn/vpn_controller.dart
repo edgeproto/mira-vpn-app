@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/auth/auth_controller.dart';
 import '../api/api_exception.dart';
 import '../providers/dependency_providers.dart';
+import 'vpn_location_provider.dart';
 import 'wg_quick_config.dart';
 
 /// High-level VPN lifecycle for the Home screen.
@@ -187,6 +188,15 @@ class VpnController extends Notifier<VpnState> {
     );
   }
 
+  Future<String> _selectedLocationName() async {
+    try {
+      final loc = await ref.read(vpnLocationControllerProvider.future);
+      return loc.selectedName;
+    } catch (_) {
+      return 'Finland';
+    }
+  }
+
   Future<void> _onSignedOut(String userId) async {
     final adapter = ref.read(vpnTunnelAdapterProvider);
     if (adapter.supported) {
@@ -259,14 +269,16 @@ class VpnController extends Notifier<VpnState> {
     try {
       final store = ref.read(wgConfigStoreProvider);
       final api = ref.read(wireGuardApiProvider);
+      final location = await _selectedLocationName();
       final cached = await store.read(userId);
       late final String config;
       try {
         final dto = auth.isSignedIn
-            ? await api.createConfig()
+            ? await api.createConfig(location: location)
             : await api.createGuestConfig(
                 deviceId:
                     await ref.read(guestDeviceStoreProvider).readOrCreateDeviceId(),
+                location: location,
               );
         config = dto.config;
         await store.write(userId, config);

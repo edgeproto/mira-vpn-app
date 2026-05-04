@@ -39,6 +39,15 @@ class _MiraVpnAppState extends ConsumerState<MiraVpnApp> {
   Widget build(BuildContext context) {
     ref.watch(authControllerProvider);
     ref.watch(vpnControllerProvider);
+    // Prefetch server list early (Step 5: startup), not only when Home builds.
+    ref.watch(vpnLocationControllerProvider);
+    ref.listen<AuthState>(authControllerProvider, (AuthState? prev, AuthState next) {
+      final prevId = prev?.user?.id;
+      final nextId = next.user?.id;
+      if (prevId != nextId) {
+        ref.invalidate(vpnLocationControllerProvider);
+      }
+    });
     final router = ref.watch(goRouterProvider);
     final showBootSplash = !_isTestEnv && !_minSplashElapsed;
 

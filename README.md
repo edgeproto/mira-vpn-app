@@ -4,8 +4,14 @@ Flutter client for the Mira VPN WireGuard service. Talks to the `mira-vpn-backen
 to register / sign in users, provision WireGuard peers, and bring up a tunnel on
 Android via `wireguard_flutter_plus`.
 
-Phase 1 target: single server (Finland), three tabs (Home / Premium / Me),
-email + password auth, AdMob on the free tier, Google Play Billing on Pro.
+The app loads **VPN regions** from `GET /wireguard/locations` (server list and
+display names come from the backend registry). How those servers are defined
+(JSON, env vars, WireGuard host requirements) is documented in the backend repo:
+[`mira-vpn-backend/docs/wireguard-locations.md`](../mira-vpn-backend/docs/wireguard-locations.md).
+
+Phase 1 target: three tabs (Home / Premium / Me), email + password auth, AdMob
+on the free tier, Google Play Billing on Pro, multi-region server selection when
+the API exposes more than one location.
 
 ## Requirements
 

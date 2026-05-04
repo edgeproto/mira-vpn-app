@@ -1,15 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:mira_vpn_app/core/ads/ads_controller.dart';
+import 'package:mira_vpn_app/core/api/models/wireguard_location_dto.dart';
 import 'package:mira_vpn_app/core/providers/dependency_providers.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_controller.dart';
+import 'package:mira_vpn_app/core/vpn/vpn_location_provider.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_providers.dart';
 import 'package:mira_vpn_app/features/home/home_connection_state.dart';
 import 'package:mira_vpn_app/features/home/home_screen.dart';
 
+class _StubVpnLocation extends VpnLocationController {
+  @override
+  Future<VpnLocationState> build() async => const VpnLocationState(
+        locations: [
+          WireguardLocationDto(name: 'Finland', displayName: 'Finland'),
+        ],
+        selectedName: 'Finland',
+      );
+}
+
 void main() {
+  setUpAll(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+  });
+
   testWidgets('HomeContent shows disconnected, preparing, connecting, and connected copy', (
     WidgetTester tester,
   ) async {
@@ -92,7 +109,11 @@ void main() {
   testWidgets('HomeScreen reflects vpn controller debug state', (
     WidgetTester tester,
   ) async {
-    final container = ProviderContainer();
+    final container = ProviderContainer(
+      overrides: [
+        vpnLocationControllerProvider.overrideWith(_StubVpnLocation.new),
+      ],
+    );
     addTearDown(container.dispose);
 
     await tester.pumpWidget(
@@ -151,6 +172,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          vpnLocationControllerProvider.overrideWith(_StubVpnLocation.new),
           adsControllerProvider.overrideWithValue(ads),
           isFreeTierProvider.overrideWithValue(true),
           vpnControllerProvider.overrideWith(() => vpn),
@@ -175,6 +197,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          vpnLocationControllerProvider.overrideWith(_StubVpnLocation.new),
           adsControllerProvider.overrideWithValue(ads),
           isFreeTierProvider.overrideWithValue(false),
           vpnControllerProvider.overrideWith(() => vpn),

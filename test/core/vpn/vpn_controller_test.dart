@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:mira_vpn_app/core/api/models/wireguard_config_dto.dart';
+import 'package:mira_vpn_app/core/api/models/wireguard_location_dto.dart';
 import 'package:mira_vpn_app/core/api/wireguard_api.dart';
 import 'package:mira_vpn_app/core/providers/dependency_providers.dart';
 import 'package:mira_vpn_app/core/storage/guest_device_store.dart';
 import 'package:mira_vpn_app/core/storage/wg_config_store.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_controller.dart';
+import 'package:mira_vpn_app/core/vpn/vpn_location_provider.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_providers.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_tunnel_contract.dart';
 import 'package:mira_vpn_app/core/vpn/vpn_tunnel_stub.dart';
@@ -59,6 +61,16 @@ class _MemoryWgStore implements WgConfigStore {
   }
 }
 
+class _StubVpnLocation extends VpnLocationController {
+  @override
+  Future<VpnLocationState> build() async => const VpnLocationState(
+        locations: [
+          WireguardLocationDto(name: 'Finland', displayName: 'Finland'),
+        ],
+        selectedName: 'Finland',
+      );
+}
+
 class _FakeWireGuardApi implements WireGuardApi {
   const _FakeWireGuardApi({this.dto, this.guestDto, this.error});
 
@@ -67,7 +79,12 @@ class _FakeWireGuardApi implements WireGuardApi {
   final Object? error;
 
   @override
-  Future<WireGuardConfigDto> createConfig({String location = 'Finland'}) async {
+  Future<List<WireguardLocationDto>> listLocations() async => const [
+        WireguardLocationDto(name: 'Finland', displayName: 'Finland'),
+      ];
+
+  @override
+  Future<WireGuardConfigDto> createConfig({required String location}) async {
     if (error != null) {
       Error.throwWithStackTrace(error!, StackTrace.current);
     }
@@ -77,7 +94,7 @@ class _FakeWireGuardApi implements WireGuardApi {
   @override
   Future<WireGuardConfigDto> createGuestConfig({
     required String deviceId,
-    String location = 'Finland',
+    required String location,
   }) async {
     if (error != null) {
       Error.throwWithStackTrace(error!, StackTrace.current);
@@ -85,6 +102,11 @@ class _FakeWireGuardApi implements WireGuardApi {
     return guestDto ?? dto!;
   }
 }
+
+List<Override> _vpnControllerTestOverrides(List<Override> inner) => <Override>[
+      vpnLocationControllerProvider.overrideWith(_StubVpnLocation.new),
+      ...inner,
+    ];
 
 class _FakeGuestDeviceStore implements GuestDeviceStore {
   const _FakeGuestDeviceStore(this.deviceId);
@@ -183,14 +205,14 @@ void main() {
         config: _sampleIni,
       );
       final container = ProviderContainer(
-        overrides: [
+        overrides: _vpnControllerTestOverrides([
           authControllerProvider.overrideWith(_SignedInAuth.new),
           vpnTunnelAdapterProvider.overrideWithValue(tunnel),
           wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
           wireGuardApiProvider.overrideWithValue(
             const _FakeWireGuardApi(dto: dto),
           ),
-        ],
+        ]),
       );
       addTearDown(container.dispose);
 
@@ -205,7 +227,7 @@ void main() {
     test('connect without sign-in uses guest config and connects', () async {
       final tunnel = _FakeTunnel();
       final container = ProviderContainer(
-        overrides: [
+        overrides: _vpnControllerTestOverrides([
           authControllerProvider.overrideWith(_SignedOutAuth.new),
           vpnTunnelAdapterProvider.overrideWithValue(tunnel),
           wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
@@ -223,7 +245,7 @@ void main() {
               ),
             ),
           ),
-        ],
+        ]),
       );
       addTearDown(container.dispose);
 
@@ -238,7 +260,7 @@ void main() {
     test('connect maps 409 to error message', () async {
       final tunnel = _FakeTunnel();
       final container = ProviderContainer(
-        overrides: [
+        overrides: _vpnControllerTestOverrides([
           authControllerProvider.overrideWith(_SignedInAuth.new),
           vpnTunnelAdapterProvider.overrideWithValue(tunnel),
           wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
@@ -254,7 +276,7 @@ void main() {
               ),
             ),
           ),
-        ],
+        ]),
       );
       addTearDown(container.dispose);
 
@@ -267,7 +289,7 @@ void main() {
 
     test('unsupported platform sets error', () async {
       final container = ProviderContainer(
-        overrides: [
+        overrides: _vpnControllerTestOverrides([
           authControllerProvider.overrideWith(_SignedInAuth.new),
           vpnTunnelAdapterProvider.overrideWithValue(StubVpnTunnelAdapter()),
           wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
@@ -282,7 +304,7 @@ void main() {
               ),
             ),
           ),
-        ],
+        ]),
       );
       addTearDown(container.dispose);
 
@@ -303,14 +325,14 @@ void main() {
         config: _sampleIni,
       );
       final container = ProviderContainer(
-        overrides: [
+        overrides: _vpnControllerTestOverrides([
           authControllerProvider.overrideWith(_SignedInAuth.new),
           vpnTunnelAdapterProvider.overrideWithValue(tunnel),
           wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
           wireGuardApiProvider.overrideWithValue(
             const _FakeWireGuardApi(dto: dto),
           ),
-        ],
+        ]),
       );
       addTearDown(container.dispose);
 
@@ -346,14 +368,14 @@ void main() {
         config: _sampleIni,
       );
       final container = ProviderContainer(
-        overrides: [
+        overrides: _vpnControllerTestOverrides([
           authControllerProvider.overrideWith(_SignedInAuth.new),
           vpnTunnelAdapterProvider.overrideWithValue(tunnel),
           wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
           wireGuardApiProvider.overrideWithValue(
             const _FakeWireGuardApi(dto: dto),
           ),
-        ],
+        ]),
       );
       addTearDown(container.dispose);
 
@@ -373,7 +395,7 @@ void main() {
     test('resume refresh reflects current connected stage', () async {
       final tunnel = _FakeTunnel()..currentStage = 'connected';
       final container = ProviderContainer(
-        overrides: [
+        overrides: _vpnControllerTestOverrides([
           authControllerProvider.overrideWith(_SignedInAuth.new),
           vpnTunnelAdapterProvider.overrideWithValue(tunnel),
           wgConfigStoreProvider.overrideWithValue(_MemoryWgStore()),
@@ -388,7 +410,7 @@ void main() {
               ),
             ),
           ),
-        ],
+        ]),
       );
       addTearDown(container.dispose);
 
